@@ -1,0 +1,73 @@
+services:
+  torrent:
+    image: ghcr.io/linuxserver/qbittorrent:4.5.3
+    network_mode: service:vpn
+    depends_on:
+      - vpn
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - WEBUI_PORT=8081
+    volumes:
+      - ./qbittorrent:/config
+      - ~/Downloads:/downloads
+      - /mnt/scihub:/scihub
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--no-verbose", "--tries=1", "--spider", "--no-check-certificate", "https://localhost:8081"]
+      interval: 60s
+      retries: 3
+      start_period: 0s
+      timeout: 30s
+    restart: unless-stopped
+  #============================================================================================================
+  # says the depends_on isn't required?
+  vpn:
+    image: qmcgaw/gluetun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - 8081:8081
+      - 5031:5031
+      - 5030:5030
+      - 8000:8000
+    environment:
+      - VPN_SERVICE_PROVIDER=nordvpn
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY_SECRETFILE=/run/secrets/privatekey
+    secrets:
+      - privatekey
+  ip_bullshit:
+    network_mode: service:vpn
+    build:
+      dockerfile: ./ip-detection/Dockerfile
+    environment:
+      - CHANGE_SCRIPT=/vpn-scripts/myanonamouse.sh
+    volumes:
+      - ./vpn-scripts:/vpn-scripts
+  slskd:
+    image: slskd/slskd
+    network_mode: service:vpn
+    user: 1000:1000
+    depends_on:
+      - vpn
+    environment:
+      - SLSKD_REMOTE_CONFIGURATION=true
+    volumes:
+      - ./soulseek:/app
+      - ~/Downloads:/downloads
+      - /mnt/media/music/music:/music:ro
+    restart: unless-stopped
+  autoheal:
+    deploy:
+      replicas: 1
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: all
+      AUTOHEAL_ONLY_MONITOR_RUNNING: true
+    image: willfarrell/autoheal:latest
+    network_mode: none
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+secrets:
+  privatekey:
+    file: ./wireguardkey # git repo for vpn has a branch to retrieve this from a nordvpn key
