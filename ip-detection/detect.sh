@@ -15,15 +15,17 @@ if [ -e "$lD" ] || [ -e "$lD" ]; then
     fi
 fi
 
-wget ifconfig.co -O "$cIP"
 date +"%Y-%m-%d %H:%M:%SZ" > "$cD"
+echo "running at $(cat $cD)"
+wget -q ifconfig.co -O "$cIP"
 
 if [ ! -e "$lIP" ] || ! cmp -s "$cIP" "$lIP" ; then
     echo "IP changed from"
-    echo "$(cat "$lIP") at $(cat "$lD")"
+    echo "    $(cat "$lIP") at $(cat "$lD")"
     echo "to"
-    echo "$(cat "$cIP") at $(cat "$cD")"
+    echo "    $(cat "$cIP") at $(cat "$cD")"
     if [ -e "${CHANGE_SCRIPT:-/not/a/real/path}" ]; then
+        echo "running $CHANGE_SCRIPT"
         "$CHANGE_SCRIPT"
     else
         echo >&2 "please set CHANGE_SCRIPT"
