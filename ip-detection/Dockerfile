@@ -28,5 +28,5 @@ CMD ["/usr/sbin/crond", "-f", "-l", "2"]
 
 #RUN cat <<'EOF' > /detect.sh
 #EOF
-COPY detect.sh /detect.sh
+COPY ./detect.sh /detect.sh
 RUN chmod +x /detect.sh
