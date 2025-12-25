@@ -43,10 +43,9 @@ services:
     network_mode: service:vpn
     build:
       context: ip-detection
-    environment:
-      - CHANGE_SCRIPT=/vpn-scripts/myanonamouse.sh
     volumes:
-      - ./vpn-scripts:/vpn-scripts
+      - ./vpn-scripts/cron:/scripts
+      - ./vpn-scripts/cron/cache:/cache
     restart: always
     depends_on:
       vpn:
