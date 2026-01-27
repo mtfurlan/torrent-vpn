@@ -1,0 +1,64 @@
+#!/bin/sh
+set -eu
+
+port=${1:?need to pass port}
+interface=${2:?need to pass interface}
+host=${3:-https://localhost:8081}
+
+echo "setting port=$port, interface=$interface to $host"
+
+username="admin"
+password="hunter.2"
+
+
+msg() {
+    echo >&2 "${1-}"
+}
+
+
+loggedIn=false
+for _ in $(seq 3); do
+    msg "logging in: "
+    if wget --quiet -O- --keep-session-cookies --save-cookies /tmp/cookies --no-check-certificate --header="Referer: $host" --post-data="username=$username&password=$password" "$host/api/v2/auth/login" 1>&2; then
+        loggedIn=true
+        break
+    fi
+    sleep 15
+done
+msg
+
+if [ "$loggedIn" != true ]; then
+    msg "failed to login after a few tries, giving up"
+    exit 42
+fi
+
+callAPI()
+{
+    endpoint=${1?-must pass endpoint}
+    data=${2:-}
+    trap 'rm -rf $tmpfile' EXIT
+    tmpfile=$(mktemp)
+    http_code=$(wget -S -O "$tmpfile" --load-cookies /tmp/cookies --no-check-certificate --header="Referer: $host" --method=POST --body-data "json=$data" "$host/api/v2/$endpoint" 2>&1 | sed -n 's/ *HTTP.* \([0-9]*\) .*/\1/p')
+    if [ "$http_code" -lt 200 ] || [ 300 -le "$http_code" ] && [ "$http_code" -ne 304 ]; then
+        echo "bad http response: $http_code"
+	exit 43
+    fi
+    cat "$tmpfile"
+}
+
+printf "\nset preferences"
+wget --quiet -O- --load-cookies /tmp/cookies --no-check-certificate --header="Referer: $host" --post-data="json={\"listen_port\":$port,\"current_network_interface\":\"$interface\",\"random_port\":false,\"upnp\":false}" "$host/api/v2/app/setPreferences"
+printf "\ndone!\n"
+
+
+data=$(cat <<EOF
+{
+    "listen_port":$port,
+    "current_network_interface":"$interface",
+    "random_port":false,
+    "upnp":false
+}
+EOF
+)
+
+callAPI app/setPreferences "$data"

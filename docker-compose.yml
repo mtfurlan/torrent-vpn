@@ -23,7 +23,6 @@ services:
       timeout: 30s
     restart: always
   #============================================================================================================
-  # says the depends_on isn't required?
   vpn:
     image: qmcgaw/gluetun
     cap_add:
@@ -32,12 +31,17 @@ services:
       - 8081:8081
       - 5031:5031
       - 5030:5030
+    volumes:
+      - ./vpn-scripts:/vpn-scripts
     environment:
-      - VPN_SERVICE_PROVIDER=nordvpn
+      - VPN_SERVICE_PROVIDER=protonvpn
       - VPN_TYPE=wireguard
-      - WIREGUARD_PRIVATE_KEY_SECRETFILE=/run/secrets/privatekey
+      - WIREGUARD_PRIVATE_KEY_SECRETFILE=/run/secrets/protonkey
+      - VPN_PORT_FORWARDING=on
+      - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c   '/vpn-scripts/port-forward {{PORT}} {{VPN_INTERFACE}} https://vpn:8081 2>&1'
+      - VPN_PORT_FORWARDING_DOWN_COMMAND=/bin/sh -c '/vpn-scripts/port-forward 0 lo https://vpn:8081 2>&1'
     secrets:
-      - privatekey
+      - protonkey
     restart: always
   ip_bullshit:
     network_mode: service:vpn
@@ -65,5 +69,5 @@ services:
       - /mnt/media/music/music:/music:ro
     restart: always
 secrets:
-  privatekey:
-    file: ./wireguardkey # git repo for vpn has a branch to retrieve this from a nordvpn key
+  protonkey:
+    file: ./wireguardkey_proton
