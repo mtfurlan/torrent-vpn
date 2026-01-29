@@ -1,0 +1,63 @@
+#!/bin/bash
+set -eu
+
+host="https://localhost:8081"
+username="admin"
+password="hunter.2"
+
+msg() {
+    echo >&2 -e "${1-}"
+}
+
+loggedIn=false
+for _ in $(seq 3); do
+    msg "logging in: "
+    if wget --quiet -O- --keep-session-cookies --save-cookies /tmp/cookies --no-check-certificate --header="Referer: $host" --post-data="username=$username&password=$password" "$host/api/v2/auth/login" 1>&2; then
+        loggedIn=true
+        break
+    fi
+    sleep 15
+done
+msg
+
+if [ "$loggedIn" != true ]; then
+    msg "failed to login after a few tries, giving up"
+    exit 42
+fi
+
+callAPI()
+{
+    endpoint=${1?-must pass endpoint}
+    data=${2:-}
+    args=()
+    if [[ -n "$data" ]]; then
+        args+=(--method=POST --body-data "json=$data")
+    fi
+    trap 'rm -rf $tmpfile' EXIT
+    tmpfile=$(mktemp)
+    http_code=$(wget -S -O "$tmpfile" --load-cookies /tmp/cookies --no-check-certificate --header="Referer: $host" "${args[@]}" "$host/api/v2/$endpoint" 2>&1 | sed -n 's/ *HTTP.* \([0-9]*\) .*/\1/p')
+    if [[ "$http_code" -lt 200 ]] || [[ 300 -le "$http_code" ]] && [[ "$http_code" -ne 304 ]]; then
+        echo "bad http response: $http_code"
+	exit 43
+    fi
+    cat "$tmpfile"
+}
+
+declare -a live_trackers_list_urls=(
+    "https://newtrackon.com/api/stable"
+    "https://trackerslist.com/best.txt"
+    "https://trackerslist.com/http.txt"
+    "https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_all.txt"
+    )
+trackers=""
+for tracker in "${live_trackers_list_urls[@]}"; do
+    trackers+="$(wget --quiet -O- "$tracker")"
+done
+data=$(cat <<EOF
+{
+    "add_trackers": "${trackers//$'\n'/\\n}"
+}
+EOF
+)
+
+callAPI app/setPreferences "$data"
