@@ -16,7 +16,7 @@ services:
       - ~/Downloads:/downloads
       - /mnt/scihub:/scihub
     healthcheck:
-      test: ["CMD", "wget", "-q", "--no-verbose", "--tries=1", "--spider", "--no-check-certificate", "https://localhost:8081"]
+      test: ["CMD", "wget", "-q", "--no-verbose", "--tries=1", "--spider", "--no-check-certificate", "http://localhost:8081"]
       interval: 60s
       retries: 3
       start_period: 0s
@@ -38,8 +38,8 @@ services:
       - VPN_TYPE=wireguard
       - WIREGUARD_PRIVATE_KEY_SECRETFILE=/run/secrets/protonkey
       - VPN_PORT_FORWARDING=on
-      - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c   '/vpn-scripts/port-forward {{PORT}} {{VPN_INTERFACE}} https://vpn:8081 2>&1'
-      - VPN_PORT_FORWARDING_DOWN_COMMAND=/bin/sh -c '/vpn-scripts/port-forward 0 lo https://vpn:8081 2>&1'
+      - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c   '/vpn-scripts/port-forward {{PORT}} {{VPN_INTERFACE}} http://vpn:8081 2>&1'
+      - VPN_PORT_FORWARDING_DOWN_COMMAND=/bin/sh -c '/vpn-scripts/port-forward 0 lo http://vpn:8081 2>&1'
     secrets:
       - protonkey
     restart: always

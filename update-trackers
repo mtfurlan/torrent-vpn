@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-host="https://localhost:8081"
+host="http://localhost:8081"
 username="admin"
 password="hunter.2"
 
@@ -53,6 +53,7 @@ trackers=""
 for tracker in "${live_trackers_list_urls[@]}"; do
     trackers+="$(wget --quiet -O- "$tracker")"
 done
+msg "adding $(echo "$trackers" | wc -l) trackers"
 data=$(cat <<EOF
 {
     "add_trackers": "${trackers//$'\n'/\\n}"

@@ -365,7 +365,7 @@ done
 
 output_ipfilter=${1:-}
 if [[ -z "$output_ipfilter" ]]; then
-    h "need to pass in target branch"
+    h "need to pass in output filename"
 fi
 
 DOWNLOAD_DIR=$cacheDir/downloaded
